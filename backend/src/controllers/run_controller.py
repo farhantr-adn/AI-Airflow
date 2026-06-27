@@ -3,12 +3,11 @@ import json
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from fastapi.responses import StreamingResponse
-from emergentintegrations.llm.chat import StreamDone, TextDelta, UserMessage
 
 from ..config import db
 from ..middleware import get_current_user
 from ..models import AutoFixIn
-from ..services.ai_service import AUTOFIX_SYSTEM_PROMPT, build_autofix_prompt, make_chat
+from ..services.ai_service import AUTOFIX_SYSTEM_PROMPT, build_autofix_prompt, stream_emergent
 from ..services.audit_service import audit
 from ..services.pipeline_runner import run_pipeline_task
 from ..utils import iso, new_id, now_utc
@@ -75,22 +74,18 @@ async def autofix(run_id: str, payload: AutoFixIn, user: dict = Depends(get_curr
     if run["status"] != "failed":
         raise HTTPException(status_code=400, detail="Run did not fail; nothing to fix")
     pipeline = await db.pipelines.find_one({"id": run["pipeline_id"]}, {"_id": 0})
-
-    chat = make_chat(
-        session_id=f"autofix-{run_id}",
-        system_message=AUTOFIX_SYSTEM_PROMPT,
-        provider=payload.provider,
-        model=payload.model,
-    )
     prompt = build_autofix_prompt(run, pipeline)
 
     async def event_gen():
         try:
-            async for ev in chat.stream_message(UserMessage(text=prompt)):
-                if isinstance(ev, TextDelta):
-                    yield f"data: {json.dumps({'delta': ev.content})}\n\n"
-                elif isinstance(ev, StreamDone):
-                    break
+            async for delta in stream_emergent(
+                session_id=f"autofix-{run_id}",
+                system_message=AUTOFIX_SYSTEM_PROMPT,
+                user_message=prompt,
+                provider=payload.provider,
+                model=payload.model,
+            ):
+                yield f"data: {json.dumps({'delta': delta})}\n\n"
             yield f"data: {json.dumps({'done': True})}\n\n"
         except Exception as e:
             yield f"data: {json.dumps({'error': str(e)})}\n\n"

@@ -45,9 +45,21 @@ class PipelineGenIn(BaseModel):
     test_coverage: int = 80
     enable_security: bool = True
     enable_monitoring: bool = True
+    output_format: str = "yaml"  # yaml | scripts | terraform | cloudformation
     model: str = "claude-sonnet-4-5-20250929"
     provider: str = "anthropic"
     extra_requirements: str = ""
+    # Bring-your-own-key path (optional)
+    api_key_id: Optional[str] = None  # id of a saved user api key
+    custom_model: Optional[str] = None  # overrides `model` when using user key
+
+
+class ApiKeyIn(BaseModel):
+    label: str = Field(min_length=1, max_length=60)
+    mode: str  # openai | anthropic | openai-compat
+    api_key: str = Field(min_length=8)
+    base_url: Optional[str] = None  # required for openai-compat
+    default_model: Optional[str] = None  # e.g. "gpt-4o", "claude-3-5-sonnet-20241022", "llama-3.1-70b-versatile"
 
 
 class PipelineSaveIn(BaseModel):

@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { User, Key, Cpu, Cloud, ShieldCheck } from "@phosphor-icons/react";
 import api from "@/api/client";
 import { useAuth } from "@/hooks/useAuth";
+import ApiKeyManager from "@/components/ApiKeyManager";
 
 export default function Settings() {
   const { user } = useAuth();
@@ -53,6 +54,10 @@ export default function Settings() {
             ))}
           </div>
           <div className="mt-4 text-xs text-[#71717A]">Models are powered by the Emergent Universal LLM Key. No keys needed.</div>
+        </div>
+
+        <div className="surface p-5 lg:col-span-3">
+          <ApiKeyManager />
         </div>
 
         <div className="surface p-5 lg:col-span-3">

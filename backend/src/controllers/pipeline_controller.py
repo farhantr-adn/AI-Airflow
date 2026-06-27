@@ -4,18 +4,60 @@ import logging
 
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
-from emergentintegrations.llm.chat import StreamDone, TextDelta, UserMessage
 
 from ..config import db
 from ..middleware import get_current_user
 from ..models import PipelineGenIn, PipelineSaveIn
-from ..services.ai_service import PIPELINE_SYSTEM_PROMPT, build_pipeline_prompt, make_chat
+from ..services.ai_service import (
+    build_pipeline_prompt,
+    stream_anthropic,
+    stream_emergent,
+    stream_openai_compat,
+    system_prompt_for,
+)
 from ..services.audit_service import audit
 from ..services.pipeline_runner import stages_for_platform
-from ..utils import iso, new_id, now_utc
+from ..utils import decrypt, iso, new_id, now_utc
 
 router = APIRouter(prefix="/pipelines", tags=["pipelines"])
 log = logging.getLogger("forge.pipelines")
+
+
+async def _resolve_stream(payload: PipelineGenIn, user_id: str, system_message: str, user_message: str):
+    """Decide whether to use Emergent universal key or a saved user key."""
+    if payload.api_key_id:
+        key = await db.api_keys.find_one({"id": payload.api_key_id, "user_id": user_id}, {"_id": 0})
+        if not key:
+            raise HTTPException(status_code=404, detail="API key not found")
+        api_key = decrypt(key["api_key_encrypted"])
+        model = payload.custom_model or key.get("default_model") or payload.model
+        if not model:
+            raise HTTPException(status_code=400, detail="model is required for BYOK")
+        mode = key["mode"]
+        if mode == "openai":
+            return stream_openai_compat(
+                system_message=system_message, user_message=user_message,
+                api_key=api_key, base_url=None, model=model,
+            ), {"mode": mode, "model": model}
+        if mode == "anthropic":
+            return stream_anthropic(
+                system_message=system_message, user_message=user_message,
+                api_key=api_key, model=model,
+            ), {"mode": mode, "model": model}
+        # openai-compat (Groq/LLaMA-3, OpenRouter, etc.)
+        return stream_openai_compat(
+            system_message=system_message, user_message=user_message,
+            api_key=api_key, base_url=key["base_url"], model=model,
+        ), {"mode": mode, "model": model, "base_url": key["base_url"]}
+
+    # Emergent path
+    return stream_emergent(
+        session_id=f"gen-{new_id('s')}",
+        system_message=system_message,
+        user_message=user_message,
+        provider=payload.provider,
+        model=payload.model,
+    ), {"mode": "emergent", "model": payload.model, "provider": payload.provider}
 
 
 @router.post("/generate")
@@ -24,22 +66,17 @@ async def generate_pipeline(payload: PipelineGenIn, user: dict = Depends(get_cur
     if not repo:
         raise HTTPException(status_code=404, detail="Repo not found")
 
-    chat = make_chat(
-        session_id=f"gen-{new_id('s')}",
-        system_message=PIPELINE_SYSTEM_PROMPT,
-        provider=payload.provider,
-        model=payload.model,
-    )
+    system_message = system_prompt_for(payload.output_format)
+    user_message = build_pipeline_prompt(payload, repo)
+    stream, meta = await _resolve_stream(payload, user["user_id"], system_message, user_message)
 
     async def event_gen():
         buf = []
         try:
-            async for ev in chat.stream_message(UserMessage(text=build_pipeline_prompt(payload, repo))):
-                if isinstance(ev, TextDelta):
-                    buf.append(ev.content)
-                    yield f"data: {json.dumps({'delta': ev.content})}\n\n"
-                elif isinstance(ev, StreamDone):
-                    break
+            yield f"data: {json.dumps({'meta': meta})}\n\n"
+            async for delta in stream:
+                buf.append(delta)
+                yield f"data: {json.dumps({'delta': delta})}\n\n"
             yield f"data: {json.dumps({'done': True, 'full': ''.join(buf)})}\n\n"
         except Exception as e:
             log.exception("AI gen failed")

@@ -12,12 +12,19 @@ const PLATFORMS = [
   { id: "bitbucket", label: "Bitbucket Pipelines", file: "bitbucket-pipelines.yml" },
 ];
 const STRATEGIES = ["rolling", "blue-green", "canary", "recreate"];
+const OUTPUT_FORMATS = [
+  { id: "yaml", label: "YAML", file: (p) => ({ "github-actions": ".github/workflows/ci.yml", "gitlab-ci": ".gitlab-ci.yml", "jenkins": "Jenkinsfile", "bitbucket": "bitbucket-pipelines.yml" }[p] || "pipeline.yml"), desc: "Native pipeline file for the CI platform" },
+  { id: "scripts", label: "Scripts", file: () => "Makefile + scripts/*.sh", desc: "POSIX shell scripts + Makefile orchestrator" },
+  { id: "terraform", label: "Terraform", file: () => "main.tf + variables.tf + outputs.tf", desc: "HCL provisioning the CI/CD infra" },
+  { id: "cloudformation", label: "CloudFormation", file: () => "cloudformation/pipeline.yaml", desc: "AWS CFN: CodePipeline + CodeBuild + ECR" },
+];
 
 export default function PipelineGenerator() {
   const location = useLocation();
   const navigate = useNavigate();
   const [repos, setRepos] = useState([]);
   const [models, setModels] = useState([]);
+  const [userKeys, setUserKeys] = useState([]);
   const [form, setForm] = useState({
     repo_id: location.state?.repo_id || "",
     target_platform: "github-actions",
@@ -26,9 +33,12 @@ export default function PipelineGenerator() {
     test_coverage: 80,
     enable_security: true,
     enable_monitoring: true,
+    output_format: "yaml",
     model: "claude-sonnet-4-5-20250929",
     provider: "anthropic",
     extra_requirements: "",
+    api_key_id: "",      // empty = use Emergent
+    custom_model: "",    // overrides model when using user key
   });
   const [output, setOutput] = useState("");
   const [generating, setGenerating] = useState(false);
@@ -42,6 +52,7 @@ export default function PipelineGenerator() {
       if (!form.repo_id && data.length) setForm((f) => ({ ...f, repo_id: data[0].id }));
     });
     api.get("/models").then(({ data }) => setModels(data.models));
+    api.get("/api-keys").then(({ data }) => setUserKeys(data)).catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -137,6 +148,8 @@ export default function PipelineGenerator() {
   };
 
   const platform = PLATFORMS.find((p) => p.id === form.target_platform);
+  const outputFormat = OUTPUT_FORMATS.find((f) => f.id === form.output_format);
+  const outputFileLabel = outputFormat?.file(form.target_platform) || platform?.file || "pipeline.yml";
 
   return (
     <div className="space-y-6">
@@ -144,7 +157,7 @@ export default function PipelineGenerator() {
       <header>
         <div className="micro-label mb-2">// ai pipeline generator</div>
         <h1 className="font-display font-black text-4xl tracking-tighter">New pipeline</h1>
-        <p className="text-[#A1A1AA] text-sm mt-2">Claude analyzes your repo and emits production-grade YAML.</p>
+        <p className="text-[#A1A1AA] text-sm mt-2">AI analyzes your repo and emits production-grade YAML, shell scripts, Terraform, or CloudFormation.</p>
       </header>
 
       <div className="grid grid-cols-1 lg:grid-cols-[400px_1fr] gap-6">
@@ -176,6 +189,24 @@ export default function PipelineGenerator() {
             </div>
           </Field>
 
+          <Field label="// output format">
+            <div className="grid grid-cols-2 gap-1">
+              {OUTPUT_FORMATS.map((f) => (
+                <button
+                  key={f.id}
+                  type="button"
+                  data-testid={`format-${f.id}`}
+                  onClick={() => setForm({ ...form, output_format: f.id })}
+                  className={`text-xs py-2 border ${form.output_format === f.id ? "border-[#E54D2E] bg-[#E54D2E]/5 text-white" : "border-[#262626] text-[#A1A1AA] hover:border-[#3a3a3a]"}`}
+                  title={f.desc}
+                >
+                  {f.label}
+                </button>
+              ))}
+            </div>
+            <div className="text-[10px] text-[#71717A] mt-1.5 font-mono">{OUTPUT_FORMATS.find((f) => f.id === form.output_format)?.desc}</div>
+          </Field>
+
           <Field label="// cloud target">
             <select data-testid="gen-cloud-select" value={form.cloud_target} onChange={(e) => setForm({ ...form, cloud_target: e.target.value })} className="input">
               {CLOUDS.map((c) => <option key={c} value={c}>{c.toUpperCase()}</option>)}
@@ -199,11 +230,41 @@ export default function PipelineGenerator() {
             <Toggle label="Enable Prometheus / OTel hooks" checked={form.enable_monitoring} onChange={(v) => setForm({ ...form, enable_monitoring: v })} testid="gen-monitoring" />
           </div>
 
-          <Field label="// ai model">
-            <select data-testid="gen-model-select" value={form.model} onChange={(e) => setModel(e.target.value)} className="input">
-              {models.map((m) => <option key={m.id} value={m.id}>{m.label}{m.default ? " · default" : ""}</option>)}
+          <Field label="// ai engine">
+            <select
+              data-testid="gen-key-source"
+              value={form.api_key_id}
+              onChange={(e) => setForm({ ...form, api_key_id: e.target.value })}
+              className="input"
+            >
+              <option value="">Emergent (built-in · default)</option>
+              {userKeys.map((k) => (
+                <option key={k.id} value={k.id}>BYOK · {k.label} ({k.mode})</option>
+              ))}
             </select>
+            {userKeys.length === 0 && (
+              <Link to="/app/settings" className="text-[10px] text-[#E54D2E] mt-1 inline-block">+ add your own OpenAI / Anthropic / LLaMA-3 key</Link>
+            )}
           </Field>
+
+          {form.api_key_id ? (
+            <Field label="// model id">
+              <input
+                data-testid="gen-custom-model"
+                value={form.custom_model}
+                onChange={(e) => setForm({ ...form, custom_model: e.target.value })}
+                className="input font-mono text-xs"
+                placeholder={userKeys.find((k) => k.id === form.api_key_id)?.default_model || "gpt-4o / claude-3-5-sonnet-20241022 / llama-3.1-70b-versatile"}
+              />
+              <div className="text-[10px] text-[#71717A] mt-1">Leave empty to use the key's default model.</div>
+            </Field>
+          ) : (
+            <Field label="// ai model (emergent)">
+              <select data-testid="gen-model-select" value={form.model} onChange={(e) => setModel(e.target.value)} className="input">
+                {models.map((m) => <option key={m.id} value={m.id}>{m.label}{m.default ? " · default" : ""}</option>)}
+              </select>
+            </Field>
+          )}
 
           <Field label="// extra requirements">
             <textarea
@@ -226,7 +287,7 @@ export default function PipelineGenerator() {
           <div className="flex items-center justify-between px-4 py-2.5 border-b border-[#262626] bg-[#0a0a0a]">
             <div className="flex items-center gap-2 font-mono text-xs text-[#A1A1AA]">
               <Cpu size={12} weight="duotone" color="#E54D2E" />
-              <span>{platform?.file || "pipeline.yml"}</span>
+              <span>{outputFileLabel}</span>
               {generating && <span className="text-[#E54D2E] ml-2">● streaming</span>}
             </div>
             <div className="flex items-center gap-2">

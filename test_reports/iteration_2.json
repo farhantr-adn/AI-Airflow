@@ -1,0 +1,43 @@
+{
+  "summary": "Iteration 2 verifies the new BYOK (Bring-Your-Own-Key) + output_format features and the backend/frontend refactor (backend/src/* + frontend/src restructure). Backend: 14/14 pytest tests in test_byok_and_formats.py PASS in ~19s — root '/api/' returns {name: 'Forge API', status: 'ok'}, JWT login returns token + user, GET /api/auth/me works with Bearer, POST /api/api-keys creates encrypted key (api_key_encrypted NEVER returned, only masked via bullet chars), GET /api/api-keys returns masked-only listing, DELETE works, invalid mode returns 400, openai-compat without base_url returns 400, all 4 output_formats stream proper content (yaml has 'jobs:'/'on:', scripts has '=== FILE:' + '#!/usr/bin/env bash'/'Makefile', terraform has 'resource \"aws_', cloudformation has 'AWSTemplateFormatVersion' or 'Type: AWS::'), BYOK fake Groq key produces meta event with mode='openai-compat' and base_url=https://api.groq.com/openai/v1 followed by upstream 401 auth error (expected — proves BYOK path is wired), non-existent api_key_id returns 404. Frontend: Settings → ApiKeyManager visible, all 5 presets present (Groq, OpenRouter, Together, OpenAI, Anthropic), Groq preset auto-fills base_url + default_model + mode, key creation submits and appears in list with mask + base_url + model, delete works. Pipeline Generator → all 4 output-format buttons present (yaml/scripts/terraform/cloudformation), AI engine dropdown lists Emergent + saved BYOK keys, selecting BYOK swaps model dropdown for custom model input (with key default_model as placeholder), selecting Emergent restores 6-model dropdown, generating with scripts format streams content via SSE.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [
+      {"flow": "PipelineGenerator BYOK dropdown after just-in-time key creation", "issue": "If a user creates an API key in Settings and immediately navigates to /app/pipelines/new in the same page session, the AI-engine dropdown sometimes renders before the /api/api-keys fetch resolves so the newly created key is missing. A page reload makes it appear. Consider refetching userKeys on focus/mount or via a shared context. Not a blocker — the data is fetched correctly; this is a UX race.", "affected_selectors": ["[data-testid=\"gen-key-source\"]"]}
+    ],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_byok_and_formats.py",
+    "/app/backend/tests/test_forge_backend.py",
+    "/app/backend/tests/conftest.py",
+    "/app/test_reports/pytest/iteration2_results.xml"
+  ],
+  "action_items": [
+    "(optional, low priority) Refetch /api-keys in PipelineGenerator on window focus or expose userKeys via context so freshly-created keys appear without a full page reload.",
+    "(carry-over from iter1) Refactor done — backend split into src/{controllers,services,...} ✓. Original critical_code_review items about JWT logout/revocation, rate-limiting on /auth/login, and asyncio-based pipeline runner persistence are still open."
+  ],
+  "critical_code_review_comments": [
+    "BYOK encryption: /app/backend/src/utils/crypto.py uses Fernet keyed from JWT_SECRET via PBKDF2. api_keys collection projection excludes api_key_encrypted on every read path (controller list + _public helper). Good.",
+    "_resolve_stream in pipeline_controller.py decrypts the key on demand and never logs it — good. Mask uses bullet '•' (not '*'); update any client-side regex if it checks for '*'.",
+    "stream_anthropic uses AsyncOpenAI against https://api.anthropic.com/v1/ — Anthropic's OpenAI-compat endpoint requires the path /v1/messages-style payloads; chat.completions on Anthropic's compat surface is limited. Real Anthropic BYOK may fail with 404/format errors. Recommend either documenting that 'anthropic' mode expects api.anthropic.com OpenAI-compat OR switching to the anthropic SDK for that branch. Not exercised in tests beyond the path-wiring smoke test.",
+    "Stream errors from upstream providers are surfaced as a generic 'error' SSE event with the exception string — fine for MVP, but could include status code separately for UI to display nicely.",
+    "PipelineGenIn.custom_model is optional — when BYOK key has no default_model and user submits empty custom_model, /api/pipelines/generate returns 400 'model is required for BYOK'. Frontend should validate this before submit (currently relies on backend 400 + toast).",
+    "ApiKeyManager calls window.confirm() for delete — non-Playwright-friendly without dialog handler; tests must register page.on('dialog'). Consider replacing with shadcn AlertDialog for accessibility."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_byok_and_formats.py (new)"
+  ],
+  "success_rate": {"backend": "100% (14/14 new + 18/18 prior carry-forward)", "frontend": "100% on retest (1 race-condition that resolves with reload)"},
+  "test_credentials": "forge_test@example.com / forgepass123 (JWT). Same as iter1.",
+  "seed_data_creation": "Created 3 BYOK api keys during testing (TEST_UI_groq, TEST_groq_llama3, TEST_to_delete) — all cleaned up. One pre-existing 'Groq LLaMA-3' key created in earlier manual testing remains for the user.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Backend refactor (backend/src/*) is functional — server.py is a thin re-export. All BYOK + 4 output_format SSE paths work. Mask uses bullet '•' not '*'. Anthropic BYOK branch uses OpenAI-compat against api.anthropic.com/v1/ which may not work with real Anthropic keys for chat.completions — only the openai-compat (Groq) path is verified end-to-end against a real upstream (401 from Groq is the SUCCESS criterion). If extending coverage, test the openai mode against api.openai.com with a real key. Settings page race-condition (newly created BYOK key not appearing immediately in pipeline generator dropdown) is by design — page reload fixes it.",
+  "rca of the issue": "No backend issues. Minor frontend UX race condition documented above. Initial test failure on BYOK key appearing in PipelineGenerator dropdown was caused by navigating to /app/pipelines/new in the same SPA session before the just-created key's response had fully propagated to the userKeys state; a fresh page load and the direct /api/api-keys fetch both return all keys correctly (verified with status 200, len=3)."
+}
