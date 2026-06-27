@@ -2,7 +2,7 @@ import React, { useEffect, useState, useMemo } from "react";
 import { Link, useParams, useNavigate } from "react-router-dom";
 import { ArrowLeft, Play, Trash, Code, FlowArrow, Lightning } from "@phosphor-icons/react";
 import { toast } from "sonner";
-import api from "@/lib/api";
+import api from "@/api/client";
 import { StatusBadge } from "@/components/StatusBadge";
 import PipelineDAG from "@/components/PipelineDAG";
 import { formatDistanceToNow } from "date-fns";

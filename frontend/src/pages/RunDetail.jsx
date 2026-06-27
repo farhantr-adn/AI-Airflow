@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef } from "react";
 import { Link, useParams, useNavigate } from "react-router-dom";
 import { ArrowLeft, Wrench, Cube, ArrowsClockwise, X } from "@phosphor-icons/react";
 import { toast } from "sonner";
-import api, { API } from "@/lib/api";
+import api, { API } from "@/api/client";
 import { StatusBadge } from "@/components/StatusBadge";
 import PipelineDAG from "@/components/PipelineDAG";
 import { formatDistanceToNow } from "date-fns";

@@ -3,7 +3,7 @@ import { NavLink, Outlet, useNavigate, Link } from "react-router-dom";
 import {
   House, GitBranch, FlowArrow, Cube, ShieldCheck, Gear, SignOut, Lightning, MagnifyingGlass, Terminal, Plus,
 } from "@phosphor-icons/react";
-import { useAuth } from "@/lib/auth";
+import { useAuth } from "@/hooks/useAuth";
 import CommandPalette from "@/components/CommandPalette";
 
 const navItems = [

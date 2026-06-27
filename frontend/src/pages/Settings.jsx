@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { User, Key, Cpu, Cloud, ShieldCheck } from "@phosphor-icons/react";
-import api from "@/lib/api";
-import { useAuth } from "@/lib/auth";
+import api from "@/api/client";
+import { useAuth } from "@/hooks/useAuth";
 
 export default function Settings() {
   const { user } = useAuth();

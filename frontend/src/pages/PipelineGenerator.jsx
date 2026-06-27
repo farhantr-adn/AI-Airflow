@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef } from "react";
 import { useLocation, useNavigate, Link } from "react-router-dom";
 import { ArrowLeft, Lightning, FloppyDisk, Copy, Cpu, ArrowsClockwise } from "@phosphor-icons/react";
 import { toast } from "sonner";
-import api, { API } from "@/lib/api";
+import api, { API } from "@/api/client";
 
 const CLOUDS = ["aws", "gcp", "azure", "oracle", "cloudflare", "on-prem"];
 const PLATFORMS = [

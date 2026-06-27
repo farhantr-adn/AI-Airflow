@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import api from "@/lib/api";
-import { useAuth } from "@/lib/auth";
+import api from "@/api/client";
+import { useAuth } from "@/hooks/useAuth";
 
 export default function AuthCallback() {
   const navigate = useNavigate();

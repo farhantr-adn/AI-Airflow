@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { GitBranch, Star, Trash, Plus, Code } from "@phosphor-icons/react";
 import { toast } from "sonner";
-import api from "@/lib/api";
+import api from "@/api/client";
 
 export default function Repos() {
   const [repos, setRepos] = useState([]);

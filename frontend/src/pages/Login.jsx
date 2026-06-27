@@ -2,8 +2,8 @@ import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Lightning, GoogleLogo, Envelope, Lock } from "@phosphor-icons/react";
 import { toast } from "sonner";
-import api from "@/lib/api";
-import { useAuth } from "@/lib/auth";
+import api from "@/api/client";
+import { useAuth } from "@/hooks/useAuth";
 
 export default function Login() {
   const [email, setEmail] = useState("");

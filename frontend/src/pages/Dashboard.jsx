@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { GitBranch, FlowArrow, Cube, CheckCircle, XCircle, ArrowRight, Lightning } from "@phosphor-icons/react";
-import api from "@/lib/api";
+import api from "@/api/client";
 import { StatusBadge } from "@/components/StatusBadge";
 import { formatDistanceToNow } from "date-fns";
 

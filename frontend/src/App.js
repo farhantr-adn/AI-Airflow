@@ -1,14 +1,20 @@
 import React from "react";
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { Toaster } from "sonner";
-import "@/App.css";
+import "@/styles/App.css";
 
-import { AuthProvider, useAuth } from "@/lib/auth";
+import { AuthProvider } from "@/context/AuthContext";
+import { useAuth } from "@/hooks/useAuth";
+import { ROUTES } from "@/routes";
+
+// Layouts
+import AppShell from "@/layouts/AppShell";
+
+// Pages
 import Landing from "@/pages/Landing";
 import Login from "@/pages/Login";
 import Signup from "@/pages/Signup";
 import AuthCallback from "@/pages/AuthCallback";
-import AppShell from "@/components/AppShell";
 import Dashboard from "@/pages/Dashboard";
 import Repos from "@/pages/Repos";
 import RepoConnect from "@/pages/RepoConnect";
@@ -29,23 +35,23 @@ function Protected({ children }) {
       </div>
     );
   }
-  if (!user) return <Navigate to="/login" replace />;
+  if (!user) return <Navigate to={ROUTES.login} replace />;
   return children;
 }
 
 function Router() {
   const location = useLocation();
-  // CRITICAL: process emergent session_id BEFORE any other routing
+  // CRITICAL: process Emergent session_id BEFORE any other routing
   if (location.hash?.includes("session_id=")) {
     return <AuthCallback />;
   }
   return (
     <Routes>
-      <Route path="/" element={<Landing />} />
-      <Route path="/login" element={<Login />} />
-      <Route path="/signup" element={<Signup />} />
+      <Route path={ROUTES.landing} element={<Landing />} />
+      <Route path={ROUTES.login} element={<Login />} />
+      <Route path={ROUTES.signup} element={<Signup />} />
 
-      <Route path="/app" element={<Protected><AppShell /></Protected>}>
+      <Route path={ROUTES.app} element={<Protected><AppShell /></Protected>}>
         <Route index element={<Dashboard />} />
         <Route path="repos" element={<Repos />} />
         <Route path="repos/connect" element={<RepoConnect />} />
@@ -58,7 +64,7 @@ function Router() {
         <Route path="settings" element={<Settings />} />
       </Route>
 
-      <Route path="*" element={<Navigate to="/" replace />} />
+      <Route path="*" element={<Navigate to={ROUTES.landing} replace />} />
     </Routes>
   );
 }

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { ShieldCheck, Warning, MagnifyingGlass, Bug } from "@phosphor-icons/react";
 import { toast } from "sonner";
-import api from "@/lib/api";
+import api from "@/api/client";
 import { formatDistanceToNow } from "date-fns";
 
 export default function Security() {

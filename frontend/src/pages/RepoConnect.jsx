@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { GithubLogo, GitlabLogo, Code as BitbucketLogo, ArrowLeft, Link as LinkIcon, Lightning } from "@phosphor-icons/react";
 import { toast } from "sonner";
 import { Link } from "react-router-dom";
-import api from "@/lib/api";
+import api from "@/api/client";
 
 const providers = [
   { id: "github", name: "GitHub", icon: GithubLogo, real: true, desc: "Real public-repo fetching via GitHub API" },
