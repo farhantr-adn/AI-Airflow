@@ -1,0 +1,148 @@
+{
+  "theme": "Dark",
+  "archetype": "Archetype 4 (Swiss & High-Contrast) adapted for Dark Mode",
+  "brand": {
+    "name": "Forge",
+    "tone": "Technical, authoritative, fast, precise. A no-nonsense developer tool. Bypasses the 'generic AI slop' aesthetic by anchoring itself in hardcore engineering visuals.",
+    "emotion": "Confidence, speed, and absolute control."
+  },
+  "colors": {
+    "background": {
+      "main": "#0A0A0A",
+      "surface": "#121212",
+      "surfaceHover": "#1A1A1A",
+      "panel": "#000000"
+    },
+    "border": {
+      "default": "#262626",
+      "focus": "#E54D2E",
+      "subtle": "#1A1A1A"
+    },
+    "text": {
+      "primary": "#EDEDED",
+      "secondary": "#A1A1AA",
+      "tertiary": "#71717A",
+      "inverse": "#0A0A0A"
+    },
+    "brand": {
+      "primary": "#E54D2E",
+      "primaryHover": "#CA3B22",
+      "secondary": "#FFC53D"
+    },
+    "status": {
+      "success": "#46A758",
+      "warning": "#FFC53D",
+      "error": "#E54D2E",
+      "info": "#3B82F6",
+      "pending": "#8B92A5"
+    },
+    "rules": [
+      "No purple or teal.",
+      "Never use full-screen gradients.",
+      "The UI should be 95% monochrome. Color is strictly functional (success/error/primary CTA)."
+    ]
+  },
+  "typography": {
+    "headings": {
+      "family": "Chivo, sans-serif",
+      "weights": [400, 700, 900],
+      "styles": "tracking-tight, leading-none. Use font-black for massive impact on landing pages.",
+      "sizes": {
+        "h1": "text-4xl sm:text-5xl lg:text-6xl",
+        "h2": "text-2xl sm:text-3xl lg:text-4xl",
+        "h3": "text-xl sm:text-2xl"
+      }
+    },
+    "body": {
+      "family": "IBM Plex Sans, sans-serif",
+      "weights": [400, 500],
+      "sizes": {
+        "default": "text-base",
+        "small": "text-sm",
+        "micro": "text-xs tracking-[0.1em] uppercase"
+      }
+    },
+    "mono": {
+      "family": "JetBrains Mono, monospace",
+      "weights": [400, 500],
+      "usage": "Mandatory for pipeline logs, code snippets, file paths, and metric numbers."
+    }
+  },
+  "layout": {
+    "marketing": {
+      "grid": "Tetris Grid: grid-cols-1 md:grid-cols-12 gap-8.",
+      "spacing": "Generous (py-24, py-32).",
+      "hero": "Asymmetric, overlapping elements, dark overlay (bg-black/40) if image is used."
+    },
+    "dashboard": {
+      "grid": "Control Room Grid: grid-cols-1 md:grid-cols-4 gap-4 or gap-6.",
+      "spacing": "Dense (p-4, p-6). Every pixel must be utilized.",
+      "structure": "Sidebar navigation + Topbar (Breadcrumbs & Actions) + Main Content Area."
+    },
+    "surfaces": {
+      "cards": "Flat solid surfaces. 1px border. No drop shadows. Sharp or slightly rounded corners (max rounded-md).",
+      "glass": "Used strictly for floating navs or command palette: bg-black/60 backdrop-blur-xl border border-white/10.",
+      "borders": "Grid Borders ('Technical Look'): Use border-collapse patterns to expose the skeleton of the UI."
+    }
+  },
+  "components": {
+    "buttons": {
+      "primary": "bg-[#E54D2E] text-white hover:bg-[#CA3B22] rounded-sm transition-colors",
+      "secondary": "bg-transparent border border-[#262626] text-[#EDEDED] hover:bg-[#1A1A1A] hover:text-white rounded-sm",
+      "ghost": "hover:bg-[#1A1A1A] text-[#A1A1AA] hover:text-[#EDEDED]"
+    },
+    "pipeline_visualizer": {
+      "style": "DAG (Directed Acyclic Graph). Nodes are strict rectangles with 1px border. Edges are straight, orthogonal lines (no bezier curves).",
+      "states": "Color-coded 1px left-border for status (Green for success, Red for fail, animated Gray dashed border for running)."
+    },
+    "terminal_viewer": {
+      "style": "Retro-Futurism 'Terminal' look. Deep black background (#000000). JetBrains Mono font. Text color: subtle gray for info, red for error, green for success.",
+      "features": "Sticky header for stage name, auto-scroll to bottom."
+    },
+    "navigation": {
+      "sidebar": "Slim, icon-heavy, expandable on hover. Uses Phosphor Icons.",
+      "command_palette": "Central to navigation. Triggered by Cmd+K. Search repositories, deployments, settings."
+    },
+    "forms": {
+      "inputs": "Shadcn-based but customized: bg-[#121212] border-[#262626] focus:border-[#E54D2E] focus:ring-1 focus:ring-[#E54D2E]. No rounded corners (rounded-none or rounded-sm)."
+    }
+  },
+  "motion": {
+    "speed": "Fast and snappy. 150ms transitions.",
+    "hover_states": "Slight translate-y (-translate-y-[1px]) for cards, border color shift to #E54D2E for interactive elements.",
+    "loading": "Use ASCII art loaders or monospaced 'compiling...' text instead of standard spinners where possible."
+  },
+  "accessibility": {
+    "contrast": "Ensure all text against dark backgrounds meets APCA minimums.",
+    "testing_attributes": "All interactive and key informational elements MUST include a `data-testid` attribute (e.g., `data-testid=\"deploy-button\"`).",
+    "focus_states": "Visible focus rings (2px solid #E54D2E) on all interactive elements when keyboard navigating."
+  },
+  "media": {
+    "icons": {
+      "library": "Phosphor Icons (@phosphor-icons/react)",
+      "usage": "Use 'duotone' or 'regular' weights. Keep them sharp and technical."
+    },
+    "image_urls": [
+      {
+        "url": "https://images.pexels.com/photos/30547584/pexels-photo-30547584.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
+        "description": "Abstract futuristic cyber landscape with digital matrix.",
+        "category": "hero_background"
+      },
+      {
+        "url": "https://images.pexels.com/photos/7562087/pexels-photo-7562087.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
+        "description": "Blue circuit patterned wall with dramatic lighting.",
+        "category": "feature_background"
+      }
+    ]
+  },
+  "instructions_to_main_agent": [
+    "Design 'Forge', a developer-first CI/CD SaaS. Do not make it look like a generic AI tool; it must look like a hardcore engineering platform.",
+    "Strictly follow the color palette. Do NOT use purple or teal. The UI should be predominantly black and dark gray, with Tomato Red (#E54D2E) used sparingly for high-impact actions.",
+    "Typography: Use Chivo for all headings (tight tracking), IBM Plex Sans for body text, and JetBrains Mono exclusively for data, logs, and pipeline nodes.",
+    "Implement the Pipeline Visualizer as an interactive DAG. Do not use generic lists. It should look like a technical schematic.",
+    "The Terminal Logs Viewer must be a prominent feature in the dashboard, utilizing pure black (#000000) and monospace fonts.",
+    "Use pure HTML + Tailwind for the marketing landing page layouts. Use Shadcn components for dashboard logic but heavily customize them to remove standard Vercel aesthetics (make borders sharper, remove shadows, use grid layouts).",
+    "Ensure the Command Palette (Cmd+K) is prominent in the UI design.",
+    "All interactive elements MUST have `data-testid` attributes."
+  ]
+}
