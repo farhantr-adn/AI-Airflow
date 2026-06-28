@@ -1,6 +1,7 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import { Lightning, GitBranch, Cube, ShieldCheck, ChartLineUp, ArrowsClockwise, Code, Terminal, Cpu, ArrowRight } from "@phosphor-icons/react";
+import { CloudLogo, CLOUD_LABEL } from "@/components/Logos";
 
 export default function Landing() {
   return (
@@ -203,9 +204,10 @@ export default function Landing() {
             </h2>
           </div>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-px bg-[#262626] border border-[#262626]">
-            {["AWS", "GCP", "Azure", "Oracle", "Cloudflare", "On-Prem"].map((c) => (
-              <div key={c} className="bg-[#0A0A0A] p-8 grid place-items-center surface-hover transition-all">
-                <div className="font-display font-black text-2xl text-[#A1A1AA] tracking-tight">{c}</div>
+            {["aws", "gcp", "azure", "oracle", "cloudflare", "on-prem"].map((c) => (
+              <div key={c} className="bg-[#0A0A0A] p-8 flex flex-col items-center justify-center gap-3 surface-hover transition-all">
+                <CloudLogo id={c} size={40} />
+                <div className="font-display font-bold text-sm text-[#A1A1AA] tracking-tight">{CLOUD_LABEL[c]}</div>
               </div>
             ))}
           </div>

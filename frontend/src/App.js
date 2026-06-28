@@ -24,6 +24,7 @@ import PipelineDetail from "@/pages/PipelineDetail";
 import RunDetail from "@/pages/RunDetail";
 import Deployments from "@/pages/Deployments";
 import Security from "@/pages/Security";
+import Strategies from "@/pages/Strategies";
 import Settings from "@/pages/Settings";
 
 function Protected({ children }) {
@@ -61,6 +62,7 @@ function Router() {
         <Route path="runs/:id" element={<RunDetail />} />
         <Route path="deployments" element={<Deployments />} />
         <Route path="security" element={<Security />} />
+        <Route path="strategies" element={<Strategies />} />
         <Route path="settings" element={<Settings />} />
       </Route>
 

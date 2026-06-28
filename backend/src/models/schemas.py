@@ -41,6 +41,7 @@ class PipelineGenIn(BaseModel):
     repo_id: str
     target_platform: str  # github-actions | gitlab-ci | jenkins | bitbucket
     cloud_target: str
+    cloud_service: Optional[str] = None  # e.g. "ecs", "lambda", "cloud-run"
     deploy_strategy: str
     test_coverage: int = 80
     enable_security: bool = True
@@ -50,8 +51,8 @@ class PipelineGenIn(BaseModel):
     provider: str = "anthropic"
     extra_requirements: str = ""
     # Bring-your-own-key path (optional)
-    api_key_id: Optional[str] = None  # id of a saved user api key
-    custom_model: Optional[str] = None  # overrides `model` when using user key
+    api_key_id: Optional[str] = None
+    custom_model: Optional[str] = None
 
 
 class ApiKeyIn(BaseModel):

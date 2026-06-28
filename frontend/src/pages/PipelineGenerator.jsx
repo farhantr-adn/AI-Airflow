@@ -1,17 +1,18 @@
 import React, { useEffect, useState, useRef } from "react";
 import { useLocation, useNavigate, Link } from "react-router-dom";
-import { ArrowLeft, Lightning, FloppyDisk, Copy, Cpu, ArrowsClockwise } from "@phosphor-icons/react";
+import { ArrowLeft, Lightning, FloppyDisk, Copy, Cpu } from "@phosphor-icons/react";
 import { toast } from "sonner";
 import api, { API } from "@/api/client";
+import { catalogService } from "@/api";
+import { CloudLogo, ProviderLogo, CLOUD_LABEL } from "@/components/Logos";
 
-const CLOUDS = ["aws", "gcp", "azure", "oracle", "cloudflare", "on-prem"];
 const PLATFORMS = [
   { id: "github-actions", label: "GitHub Actions", file: ".github/workflows/ci.yml" },
   { id: "gitlab-ci", label: "GitLab CI", file: ".gitlab-ci.yml" },
   { id: "jenkins", label: "Jenkins", file: "Jenkinsfile" },
   { id: "bitbucket", label: "Bitbucket Pipelines", file: "bitbucket-pipelines.yml" },
 ];
-const STRATEGIES = ["rolling", "blue-green", "canary", "recreate"];
+
 const OUTPUT_FORMATS = [
   { id: "yaml", label: "YAML", file: (p) => ({ "github-actions": ".github/workflows/ci.yml", "gitlab-ci": ".gitlab-ci.yml", "jenkins": "Jenkinsfile", "bitbucket": "bitbucket-pipelines.yml" }[p] || "pipeline.yml"), desc: "Native pipeline file for the CI platform" },
   { id: "scripts", label: "Scripts", file: () => "Makefile + scripts/*.sh", desc: "POSIX shell scripts + Makefile orchestrator" },
@@ -19,26 +20,31 @@ const OUTPUT_FORMATS = [
   { id: "cloudformation", label: "CloudFormation", file: () => "cloudformation/pipeline.yaml", desc: "AWS CFN: CodePipeline + CodeBuild + ECR" },
 ];
 
+const CLOUD_ORDER = ["aws", "gcp", "azure", "oracle", "cloudflare", "on-prem"];
+
 export default function PipelineGenerator() {
   const location = useLocation();
   const navigate = useNavigate();
   const [repos, setRepos] = useState([]);
-  const [models, setModels] = useState([]);
+  const [providers, setProviders] = useState([]);
+  const [cloudServices, setCloudServices] = useState({});
+  const [strategies, setStrategies] = useState([]);
   const [userKeys, setUserKeys] = useState([]);
   const [form, setForm] = useState({
     repo_id: location.state?.repo_id || "",
     target_platform: "github-actions",
     cloud_target: "aws",
-    deploy_strategy: "rolling",
+    cloud_service: "ecs",
+    deploy_strategy: location.state?.deploy_strategy || "rolling",
     test_coverage: 80,
     enable_security: true,
     enable_monitoring: true,
     output_format: "yaml",
-    model: "claude-sonnet-4-5-20250929",
     provider: "anthropic",
+    model: "claude-sonnet-4-5-20250929",
     extra_requirements: "",
-    api_key_id: "",      // empty = use Emergent
-    custom_model: "",    // overrides model when using user key
+    api_key_id: "",
+    custom_model: "",
   });
   const [output, setOutput] = useState("");
   const [generating, setGenerating] = useState(false);
@@ -51,7 +57,9 @@ export default function PipelineGenerator() {
       setRepos(data);
       if (!form.repo_id && data.length) setForm((f) => ({ ...f, repo_id: data[0].id }));
     });
-    api.get("/models").then(({ data }) => setModels(data.models));
+    catalogService.aiProviders().then(setProviders);
+    catalogService.cloudServices().then(setCloudServices);
+    catalogService.strategies().then(setStrategies);
     api.get("/api-keys").then(({ data }) => setUserKeys(data)).catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -60,10 +68,21 @@ export default function PipelineGenerator() {
     if (outputRef.current) outputRef.current.scrollTop = outputRef.current.scrollHeight;
   }, [output]);
 
-  const setModel = (id) => {
-    const m = models.find((x) => x.id === id);
-    if (m) setForm((f) => ({ ...f, model: m.id, provider: m.provider }));
+  // When cloud target changes, reset cloud_service to the first option of the new cloud
+  useEffect(() => {
+    const list = cloudServices[form.cloud_target] || [];
+    if (list.length && !list.find((s) => s.id === form.cloud_service)) {
+      setForm((f) => ({ ...f, cloud_service: list[0].id }));
+    }
+  }, [form.cloud_target, cloudServices]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const setProvider = (pid) => {
+    const p = providers.find((x) => x.id === pid);
+    if (!p) return;
+    setForm((f) => ({ ...f, provider: pid, model: p.models[0]?.id || f.model }));
   };
+
+  const setModelId = (mid) => setForm((f) => ({ ...f, model: mid }));
 
   const generate = async (e) => {
     e?.preventDefault();
@@ -208,15 +227,45 @@ export default function PipelineGenerator() {
           </Field>
 
           <Field label="// cloud target">
-            <select data-testid="gen-cloud-select" value={form.cloud_target} onChange={(e) => setForm({ ...form, cloud_target: e.target.value })} className="input">
-              {CLOUDS.map((c) => <option key={c} value={c}>{c.toUpperCase()}</option>)}
+            <div className="grid grid-cols-3 gap-1" data-testid="cloud-grid">
+              {CLOUD_ORDER.map((c) => (
+                <button
+                  key={c}
+                  type="button"
+                  data-testid={`cloud-${c}`}
+                  onClick={() => setForm({ ...form, cloud_target: c })}
+                  className={`flex flex-col items-center justify-center gap-1 py-3 border transition-colors ${
+                    form.cloud_target === c
+                      ? "border-[#E54D2E] bg-[#E54D2E]/5"
+                      : "border-[#262626] hover:border-[#3a3a3a]"
+                  }`}
+                  title={CLOUD_LABEL[c]}
+                >
+                  <CloudLogo id={c} size={22} mono={form.cloud_target !== c} />
+                  <span className={`text-[10px] font-mono ${form.cloud_target === c ? "text-white" : "text-[#71717A]"}`}>{CLOUD_LABEL[c]}</span>
+                </button>
+              ))}
+            </div>
+          </Field>
+
+          <Field label={`// service (${CLOUD_LABEL[form.cloud_target]})`}>
+            <select
+              data-testid="gen-cloud-service"
+              value={form.cloud_service}
+              onChange={(e) => setForm({ ...form, cloud_service: e.target.value })}
+              className="input"
+            >
+              {(cloudServices[form.cloud_target] || []).map((s) => (
+                <option key={s.id} value={s.id}>{s.label}</option>
+              ))}
             </select>
           </Field>
 
           <Field label="// deploy strategy">
             <select data-testid="gen-strategy-select" value={form.deploy_strategy} onChange={(e) => setForm({ ...form, deploy_strategy: e.target.value })} className="input">
-              {STRATEGIES.map((s) => <option key={s} value={s}>{s}</option>)}
+              {strategies.map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}
             </select>
+            <Link to="/app/strategies" className="text-[10px] text-[#E54D2E] mt-1 inline-block">// not sure? compare strategies →</Link>
           </Field>
 
           <Field label={`// min test coverage: ${form.test_coverage}%`}>
@@ -248,7 +297,7 @@ export default function PipelineGenerator() {
           </Field>
 
           {form.api_key_id ? (
-            <Field label="// model id">
+            <Field label="// model id (BYOK)">
               <input
                 data-testid="gen-custom-model"
                 value={form.custom_model}
@@ -256,14 +305,55 @@ export default function PipelineGenerator() {
                 className="input font-mono text-xs"
                 placeholder={userKeys.find((k) => k.id === form.api_key_id)?.default_model || "gpt-4o / claude-3-5-sonnet-20241022 / llama-3.1-70b-versatile"}
               />
-              <div className="text-[10px] text-[#71717A] mt-1">Leave empty to use the key's default model.</div>
+              <div className="text-[10px] text-[#71717A] mt-1">Leave empty to use the key&apos;s default model.</div>
             </Field>
           ) : (
-            <Field label="// ai model (emergent)">
-              <select data-testid="gen-model-select" value={form.model} onChange={(e) => setModel(e.target.value)} className="input">
-                {models.map((m) => <option key={m.id} value={m.id}>{m.label}{m.default ? " · default" : ""}</option>)}
-              </select>
-            </Field>
+            <>
+              <Field label="// ai provider">
+                <div className="grid grid-cols-4 gap-1" data-testid="provider-grid">
+                  {providers.filter((p) => p.emergent).map((p) => (
+                    <button
+                      key={p.id}
+                      type="button"
+                      data-testid={`provider-${p.id}`}
+                      onClick={() => setProvider(p.id)}
+                      className={`flex flex-col items-center justify-center gap-1 py-3 border transition-colors ${
+                        form.provider === p.id
+                          ? "border-[#E54D2E] bg-[#E54D2E]/5"
+                          : "border-[#262626] hover:border-[#3a3a3a]"
+                      }`}
+                      title={p.label}
+                    >
+                      <ProviderLogo id={p.icon} size={20} mono={form.provider !== p.id} />
+                      <span className={`text-[10px] font-mono ${form.provider === p.id ? "text-white" : "text-[#71717A]"}`}>{p.label.split(" ")[0]}</span>
+                    </button>
+                  ))}
+                </div>
+              </Field>
+
+              <Field label="// model version">
+                <select
+                  data-testid="gen-model-select"
+                  value={form.model}
+                  onChange={(e) => setModelId(e.target.value)}
+                  className="input"
+                >
+                  {(providers.find((p) => p.id === form.provider)?.models || []).map((m) => (
+                    <option key={m.id} value={m.id}>
+                      {m.label}{m.default ? " · default" : ""}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+
+              {/* LLaMA hint - only emergent providers shown above; LLaMA is BYOK */}
+              {providers.find((p) => p.id === "llama") && (
+                <div className="text-[10px] text-[#71717A] -mt-2">
+                  Want <span className="inline-flex items-center gap-1"><ProviderLogo id="meta" size={10} /> LLaMA-3</span>?{" "}
+                  <Link to="/app/settings" className="text-[#E54D2E] hover:underline">add a Groq / OpenRouter key</Link>.
+                </div>
+              )}
+            </>
           )}
 
           <Field label="// extra requirements">

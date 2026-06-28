@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { NavLink, Outlet, useNavigate, Link } from "react-router-dom";
 import {
-  House, GitBranch, FlowArrow, Cube, ShieldCheck, Gear, SignOut, Lightning, MagnifyingGlass, Terminal, Plus,
+  House, GitBranch, FlowArrow, Cube, ShieldCheck, Gear, SignOut, Lightning, MagnifyingGlass, Plus, ListChecks,
 } from "@phosphor-icons/react";
 import { useAuth } from "@/hooks/useAuth";
 import CommandPalette from "@/components/CommandPalette";
@@ -12,6 +12,7 @@ const navItems = [
   { to: "/app/pipelines", label: "Pipelines", icon: FlowArrow, testid: "nav-pipelines" },
   { to: "/app/deployments", label: "Deployments", icon: Cube, testid: "nav-deployments" },
   { to: "/app/security", label: "Security", icon: ShieldCheck, testid: "nav-security" },
+  { to: "/app/strategies", label: "Strategy Guide", icon: ListChecks, testid: "nav-strategies" },
   { to: "/app/settings", label: "Settings", icon: Gear, testid: "nav-settings" },
 ];
 

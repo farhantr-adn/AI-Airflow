@@ -8,3 +8,4 @@ export { deploymentService } from "./deploymentService";
 export { securityService } from "./securityService";
 export { metricsService, settingsService } from "./miscService";
 export { apiKeysService } from "./apiKeysService";
+export { catalogService } from "./catalogService";

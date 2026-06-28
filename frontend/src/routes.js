@@ -15,5 +15,6 @@ export const ROUTES = {
   runDetail: (id) => `/app/runs/${id}`,
   deployments: "/app/deployments",
   security: "/app/security",
+  strategies: "/app/strategies",
   settings: "/app/settings",
 };

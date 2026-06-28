@@ -11,6 +11,7 @@ from ..controllers import (
     metrics_controller,
     settings_controller,
     api_key_controller,
+    catalog_controller,
 )
 
 api_router = APIRouter(prefix="/api")
@@ -25,6 +26,7 @@ api_router.include_router(security_controller.router)
 api_router.include_router(metrics_controller.router)
 api_router.include_router(settings_controller.router)
 api_router.include_router(api_key_controller.router)
+api_router.include_router(catalog_controller.router)
 
 
 @api_router.get("/")

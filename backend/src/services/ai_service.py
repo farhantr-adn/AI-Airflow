@@ -8,6 +8,7 @@ from emergentintegrations.llm.chat import LlmChat, StreamDone, TextDelta, UserMe
 from openai import AsyncOpenAI
 
 from ..config import settings
+from .registry import AI_PROVIDERS, CLOUD_SERVICES, DEPLOY_STRATEGIES
 
 
 # ----------------------------- System prompts ---------------------------
@@ -90,12 +91,10 @@ PIPELINE PATCH:
 
 # ----------------------------- Model registry ---------------------------
 AVAILABLE_MODELS = [
-    {"id": "claude-sonnet-4-5-20250929", "provider": "anthropic", "label": "Claude Sonnet 4.5", "recommended": True, "default": True},
-    {"id": "claude-sonnet-4-6", "provider": "anthropic", "label": "Claude Sonnet 4.6"},
-    {"id": "gpt-5.2", "provider": "openai", "label": "GPT-5.2"},
-    {"id": "gpt-5.4", "provider": "openai", "label": "GPT-5.4"},
-    {"id": "gemini-3-flash-preview", "provider": "gemini", "label": "Gemini 3 Flash"},
-    {"id": "gemini-3.1-pro-preview", "provider": "gemini", "label": "Gemini 3.1 Pro"},
+    {**m, "provider": p["id"]}
+    for p in AI_PROVIDERS
+    if p.get("emergent")
+    for m in p["models"]
 ]
 
 
@@ -118,6 +117,13 @@ def build_pipeline_prompt(payload, repo: dict) -> str:
         "cloudformation": "AWS CloudFormation YAML",
     }.get(payload.output_format, "YAML")
 
+    strategy = next((s for s in DEPLOY_STRATEGIES if s["id"] == payload.deploy_strategy), None)
+    strategy_hint = (
+        f"{strategy['label']} — {strategy['summary']}" if strategy else payload.deploy_strategy
+    )
+    cloud_service = getattr(payload, "cloud_service", None)
+    service_hint = f"{payload.cloud_target} / {cloud_service}" if cloud_service else payload.cloud_target
+
     return f"""Generate a complete CI/CD artifact ({fmt_hint}) for the following project.
 
 Repository: {repo['full_name']}
@@ -128,12 +134,20 @@ Detected tools: {', '.join(stack.get('tools', [])) or 'unknown'}
 
 Pipeline requirements:
 - Target CI platform: {payload.target_platform}
-- Cloud target: {payload.cloud_target}
-- Deploy strategy: {payload.deploy_strategy}
+- Cloud target / service: {service_hint}
+- Deploy strategy: {strategy_hint}
 - Minimum test coverage gate: {payload.test_coverage}%
 - Enable security scans (Snyk + Trivy): {payload.enable_security}
 - Enable monitoring hooks (Prometheus pushgateway / OpenTelemetry exporter): {payload.enable_monitoring}
 - Additional requirements: {payload.extra_requirements or 'None'}
+
+Tailor the deploy stage to the strategy:
+  - rolling     → use the platform's native rolling-update primitive (kubectl rollout, ECS deployment config).
+  - blue-green  → provision two environments and flip traffic via load-balancer / DNS / weighted routing.
+  - canary      → deploy a small percentage of replicas, gate promotion on metrics from Prometheus.
+  - shadow      → mirror traffic to a parallel deployment without affecting users.
+  - big-bang    → straightforward replace; include a clear warning comment that downtime is expected.
+  - phased      → stage rollouts across regions/environments with manual approvals between phases.
 
 Output ONLY the artifact content. No markdown fences. No prose.
 """
